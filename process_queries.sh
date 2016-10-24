@@ -8,3 +8,6 @@ scp api_keys.R bearloga@big-bae.eqiad.wmflabs:/home/bearloga/search_engine_compa
 # Remotely:
 cd ~/search_engine_comparison
 Rscript process_queries.R
+
+# Locally:
+scp bearloga@big-bae.eqiad.wmflabs:/home/bearloga/search_engine_comparison/data/processed.RData data/

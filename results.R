@@ -5,30 +5,42 @@ load("data/features.RData")
 
 zero_results <- queries %>%
   group_by(features) %>%
-  summarize(queries = n(),
-            Cirrus = sum(zero_result_enwiki),
-            Google = NA,
-            `Google +site:en.wikipedia.org` = NA,
-            Yahoo = NA,
-            Bing = NA) %>%
+  summarize(cirrus_n = n(),
+            cirrus_zr = sum(zero_result_enwiki, na.rm = TRUE),
+            google_n = sum(!is.na(zero_results_google)),
+            google_zr = sum(zero_results_google, na.rm = TRUE),
+            enwiki_via_google_n = sum(!is.na(zero_results_enwiki_via_google)),
+            enwiki_via_google_zr = sum(zero_results_enwiki_via_google, na.rm = TRUE),
+            yahoo_n = sum(!is.na(zero_results_yahoo)),
+            yahoo_zr = sum(zero_results_yahoo, na.rm = TRUE),
+            bing_n = sum(!is.na(zero_results_bing)),
+            bing_zr = sum(zero_results_bing, na.rm = TRUE),
+            ddg_n = sum(!is.na(zero_results_ddg)),
+            ddg_zr = sum(zero_results_ddg, na.rm = TRUE)) %>%
   ungroup %>%
+  mutate(
+    google_zr = ifelse(google_n == 0, NA, google_zr),
+    enwiki_via_google_zr = ifelse(enwiki_via_google_n == 0, NA, enwiki_via_google_zr),
+    yahoo_zr = ifelse(yahoo_n == 0, NA, yahoo_zr),
+    bing_zr = ifelse(bing_n == 0, NA, bing_zr),
+    ddg_zr = ifelse(ddg_n == 0, NA, ddg_zr)
+  ) %>%
   left_join(features[, c("features", "proportion_total", "proportion_interested")], by = "features")
 
 zero_results %>%
-  gather(engine, zr, -c(1:2, 8:9)) %>%
-  mutate(zrr = sprintf("%.0f%%", 100 * zr/queries)) %>%
-  select(-zr) %>%
-  spread(engine, zrr) %>%
   arrange(desc(proportion_total)) %>%
-  mutate(proportion_total = sprintf("%.6f%%", 100 * proportion_total),
-         proportion_interested = sprintf("%.6f%%", 100 * proportion_interested)) %>%
-  rename(`Proportion of all enwiki searches from US` = proportion_total,
-         `Proportion within this group` = proportion_interested,
-         `Sample queries` = queries,
-         `Combination of features` = features) %>%
-  select(-`Proportion within this group`) %>%
-  knitr::kable(format = "markdown", align = c("l", "r", rep("r", 8))) %>%
-  gsub("NA%", "", ., fixed = TRUE)
+  transmute(
+    `Combination of features` = features,
+    `Proportion of all enwiki searches from US` = sprintf("%.6f%%", 100 * proportion_total),
+    `Cirrus ZRR` = sprintf("%.0f%% (%.0f/%.0f)", 100 * cirrus_zr/cirrus_n, cirrus_zr, cirrus_n),
+    `Google ZRR` = sprintf("%.0f%% (%.0f/%.0f)", 100 * google_zr/google_n, google_zr, google_n),
+    `Google +site:enwiki ZRR` = sprintf("%.0f%% (%.0f/%.0f)", 100 * enwiki_via_google_zr/enwiki_via_google_n, enwiki_via_google_zr, enwiki_via_google_n),
+    `Yahoo ZRR` = sprintf("%.0f%% (%.0f/%.0f)", 100 * yahoo_zr/yahoo_n, yahoo_zr, yahoo_n),
+    `Bing ZRR` = sprintf("%.0f%% (%.0f/%.0f)", 100 * bing_zr/bing_n, bing_zr, bing_n),
+    `DDG ZRR` = sprintf("%.0f%% (%.0f/%.0f)", 100 * ddg_zr/ddg_n, ddg_zr, ddg_n)
+  ) %>%
+  knitr::kable(format = "markdown", align = c("l", "r", rep("r", 6))) %>%
+  gsub("NA% (NA/0)", "", ., fixed = TRUE)
 
 library(binom)
 
